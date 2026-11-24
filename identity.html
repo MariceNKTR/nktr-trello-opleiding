@@ -5,27 +5,60 @@
 <title>NKTR · Identiteitscontrole</title>
 <style>
 :root{color-scheme:light;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#292539;background:#fff}
-*{box-sizing:border-box}body{margin:0;padding:12px;font-size:13px}h2{font-size:15px;margin:4px 0 8px}p{margin:6px 0;color:#6c6471}button,select{font:inherit;border-radius:6px;border:1px solid #ada0bb;padding:9px;background:white;width:100%;margin:4px 0}button{background:#372846;color:white;cursor:pointer}button:disabled{background:#aaa;cursor:not-allowed}button.secondary{background:#ece7f1;color:#33213f}.notice{padding:9px;border:1px solid #e1d4e3;border-radius:6px;background:#faf9fc}.warning{background:#fff4e8;border-color:#ecc08a}.row{display:flex;gap:8px;align-items:center}.row button{flex:1}.candidate{padding:8px;border-bottom:1px solid #eee}.candidate a{font-size:12px;color:#6f4d8e}.meta{font-size:11px;color:#777}.muted{color:#888}.hidden{display:none}label{display:block;margin-top:8px;font-weight:700}#err{color:#a32930;white-space:pre-wrap}#info{white-space:pre-wrap}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{padding:10px 11px 12px;font-size:13px;line-height:1.4}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
+.brand{display:inline-flex;align-items:baseline;gap:5px;color:#6d448b;letter-spacing:.035em;white-space:nowrap}
+.brand-name{font-size:15px;font-weight:850;letter-spacing:.075em}
+.brand-studio{font-size:9px;font-weight:700;letter-spacing:.14em}
+.section-note{font-size:11px;color:#736b80}
+button,select{font:inherit;border-radius:6px;border:1px solid #c1b6c9;padding:8px;background:white;width:100%;margin:4px 0}
+button{background:#372846;color:white;cursor:pointer}
+button:disabled{background:#e5e0e9;color:#7d7582;cursor:not-allowed}
+button.secondary{background:#f3f0f6;color:#493954}
+button.compact{margin:0;padding:5px 8px;width:auto;font-size:11px}
+.notice{padding:10px;border:1px solid #ded4e5;border-radius:8px;background:#f8f5fa;font-weight:650}
+.notice.warning{background:#fff8ef;border-color:#e6c995}
+.notice.success{background:#f1f8f4;border-color:#b9d9c5}
+.row{display:flex;gap:8px;align-items:center}.row button{flex:1}
+.candidate{padding:8px 0;border-bottom:1px solid #eae6ed}
+.candidate a{font-size:12px;color:#6f4d8e}
+.meta{font-size:11px;color:#777;margin:5px 0 6px}
+.muted{color:#888}
+.hidden,[hidden]{display:none!important}
+label{display:block;margin-top:8px;font-weight:650}
+#err{color:#a32930;white-space:pre-wrap;font-size:12px;margin:5px 0}
+#info{white-space:pre-wrap}
+#coreArea{margin-top:10px;border-top:1px solid #e8e2eb;padding-top:10px}
+#coreArea summary{cursor:pointer;font-weight:650;color:#503c62}
+#coreInfo{font-size:12px;color:#655a6d}
+#content{margin-top:4px}
 </style>
 </head><body>
-<h2>IDENTITEIT · MEDEWERKERSKAART</h2>
+<div class="topbar">
+  <div class="brand" aria-label="NKTR Studio"><span class="brand-name">NKTR</span><span class="brand-studio">STUDIO</span></div>
+  <span class="section-note">Medewerkerskaart</span>
+</div>
 <div id="info" class="notice">Identiteit controleren…</div>
-<div id="err" role="alert"></div>
+<div id="err" role="alert" hidden></div>
 <section id="content" class="hidden">
   <div class="meta" id="age"></div>
   <div id="candidates"></div>
-  <label for="onb">Bestaande medewerker (Onboarding)</label>
+  <label for="onb">Onboarding-record</label>
   <select id="onb"><option value="">Selecteer een bestaande ONB-kaart</option></select>
-  <button id="link">Koppel deze kaart aan Onboarding</button>
+  <button id="link">Koppelen aan Onboarding</button>
   <div id="archive-area" class="hidden">
     <label for="opl">Bestaande Opleiding-kaart behouden</label>
     <select id="opl"><option value="">Selecteer de kaart die moet blijven</option></select>
     <button id="archive" class="secondary">Archiveer deze dubbele kaart</button>
     <p>Alleen binnen 24 uur, uitsluitend als er geen afgeronde stappen of opmerkingen zijn. Geen permanente verwijdering.</p>
   </div>
-  <button id="review" class="secondary">Vraag admincontrole aan</button>
-  <button id="refresh" class="secondary">Opnieuw controleren</button>
-  <details id="coreArea"><summary>MEDEWERKERSKAART / GEKOPPELDE PROCESSEN</summary>
+  <div class="row">
+    <button id="review" class="secondary">Admincontrole aanvragen</button>
+    <button id="refresh" class="secondary">Vernieuwen</button>
+  </div>
+  <details id="coreArea"><summary>Gekoppelde processen</summary>
     <p id="coreInfo">Registratie wordt gecontroleerd...</p>
     <button id="coreRegister" class="secondary hidden">Registreer unieke ONB-identiteit</button>
     <div id="coreProcess" class="hidden">
@@ -43,7 +76,17 @@
 const API='https://nktr-employee-core-stage.marice-angulo.workers.dev/api/identity/';
 const t=window.TrelloPowerUp.iframe();const $=id=>document.getElementById(id);
 let state=null,cardId=null,busy=false,referralPreview=null,coreRegistered=false;
-function showError(err){$('err').textContent=String(err?.message||err||'Onbekende fout');}
+// An empty string clears an error. It must NOT become 'Onbekende fout'.
+function showError(err){
+ const message=typeof err==='string'?err:(err?.message||String(err??''));
+ $('err').textContent=message.trim();
+ $('err').hidden=!message.trim();
+ fitPanel();
+}
+function fitPanel(){
+ // Official Trello iframe API. Resize to content rather than leaving a blank 580px block.
+ requestAnimationFrame(()=>{try{Promise.resolve(t.sizeTo(document.body)).catch(()=>{});}catch(_e){}});
+}
 async function call(action,data={}){
  const jwt=await t.jwt({state:JSON.stringify({action:'v46-'+action,cardId})});
  const r=await fetch(API+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},body:JSON.stringify({cardId,...data})});
@@ -65,14 +108,18 @@ async function loadCore(){
  }catch(e){coreRegistered=false;$('coreProcess').classList.add('hidden');
   $('coreInfo').textContent='Nog niet in Employee Core geregistreerd. '+e.message;
   $('coreRegister').classList.toggle('hidden',card.board!=='ONB'||state?.signal!=='UNVERIFIED');
- }
+ }finally{fitPanel();}
 }
 function option(parent,item){const o=document.createElement('option');o.value=item.cardId;o.textContent=item.name+' · '+item.score+'/100'+(item.archived?' · historisch':'');parent.append(o)}
 function text(parent,text,tag='div',css=''){const el=document.createElement(tag);el.textContent=text;if(css)el.className=css;parent.append(el);return el}
 function update(){if(!state)return;const d=state;
  $('content').classList.remove('hidden');const linked=d.linkedOnboarding;
- const explain=d.signal==='LINKED'?'Gekoppeld aan bestaande ONB-medewerker':d.signal==='REGISTERED'?'Geregistreerd in Employee Core':d.signal==='STRONG'?'Sterke overeenkomst gevonden, controle nodig':d.signal==='POSSIBLE'?'Mogelijke overeenkomst, handmatig bevestigen':'Nog geen identiteit bevestigd';
+ const bestScore=Math.max(0,...(d.candidates||[]).map(c=>Number(c.score)||0));
+ const duplicateLabel=bestScore?`Mogelijke dubbel (${Math.round(bestScore)}% overeenkomst) · controle nodig`:'Mogelijke dubbel · controle nodig';
+ const explain=d.signal==='LINKED'?'Gekoppeld aan Onboarding':d.signal==='REGISTERED'?'Geregistreerd in Employee Core':d.signal==='STRONG'||d.signal==='POSSIBLE'?duplicateLabel:'Nog geen identiteit bevestigd';
  $('info').textContent=explain+(d.review?.status==='OPEN'?' · admincontrole aangevraagd':'');
+ $('info').classList.toggle('warning',d.signal==='STRONG'||d.signal==='POSSIBLE');
+ $('info').classList.toggle('success',d.signal==='LINKED'||d.signal==='REGISTERED');
  $('age').textContent=d.createdAt?'Aangemaakt: '+new Date(d.createdAt).toLocaleString('nl-NL')+' · '+(d.within24Hours?'Binnen 24 uur':'Na 24 uur'): 'Aanmaaktijd niet betrouwbaar vast te stellen · admincontrole verplicht';
  const box=$('candidates');box.replaceChildren();const onb=$('onb'),opl=$('opl');onb.replaceChildren();opl.replaceChildren();const z=document.createElement('option');z.value='';z.textContent='Selecteer ONB-medewerker';onb.append(z);const z2=document.createElement('option');z2.value='';z2.textContent='Bestaande OPL-kaart';opl.append(z2);
  for(const c of d.candidates){const div=document.createElement('div');div.className='candidate';text(div,`${c.board} · ${c.name} · ${c.score}/100${c.archived?' (historisch)':''}`);const a=text(div,'Open Trello-kaart','a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';box.append(div);if(!c.archived&&c.board==='ONB')option(onb,c);if(!c.archived&&c.board==='OPL'&&c.score>=92)option(opl,c)}
@@ -83,6 +130,7 @@ function update(){if(!state)return;const d=state;
  onb.disabled=!canResolve;$('link').disabled=!canResolve;
  $('archive').disabled=!canResolve;$('review').disabled=d.review?.status==='OPEN';
  if(linked){text(box,'Gekoppeld aan ONB: '+linked,'p','muted');}
+ fitPanel();
 }
 async function refresh(){showError('');$('info').textContent='Controleren…';state=await call('inspect');update();await loadCore()}
 async function action(task,data,confirmation){if(busy)return;if(confirmation&&!confirm(confirmation))return;busy=true;showError('');try{const result=await call(task,data);$('info').textContent=JSON.stringify(result);await refresh()}catch(err){showError(err)}finally{busy=false}}
@@ -97,5 +145,6 @@ $('coreDest').addEventListener('change',()=>{$('coreCreate').disabled=true;refer
 $('corePreview').addEventListener('click',async()=>{showError('');try{const dest=$('coreDest').value;if(!dest)throw Error('Kies een ALG-bord');const r=await coreCall('referral-preview',{sourceCardId:cardId,destinationCode:dest});referralPreview=r.previewId;$('coreInfo').textContent='KOPPELING GECONTROLEERD: '+r.employee+' · '+r.from+' → '+r.destination+' · '+r.targetList;$('coreCreate').disabled=false;}catch(err){showError(err)}});
 $('coreCreate').addEventListener('click',async()=>{if(!referralPreview)return;if(!confirm('Maak dit gekoppelde proces aan in Trello?'))return;const id=referralPreview;referralPreview=null;$('coreCreate').disabled=true;try{const r=await coreCall('referral-create',{previewId:id,confirm:'CREATE LINKED PROCESS'});$('coreInfo').textContent='RESULTAAT: '+r.status+(r.url?' · '+r.url:'')+(r.error?' · '+r.error:'');await loadCore()}catch(e){showError(e)}});
 $('refresh').addEventListener('click',()=>refresh().catch(showError));
-(async()=>{try{const c=await t.card('id');cardId=c.id;await refresh()}catch(err){showError(err);$('info').textContent='Identiteitscontrole momenteel niet beschikbaar.'}})();
+$('coreArea').addEventListener('toggle',fitPanel);
+(async()=>{try{const c=await t.card('id');cardId=c.id;await refresh()}catch(err){showError(err);$('info').textContent='Identiteitscontrole momenteel niet beschikbaar.';fitPanel()}})();
 </script></body></html>
