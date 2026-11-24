@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NKTR · Identiteitscontrole</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#292539;background:#fff}
+*{box-sizing:border-box}body{margin:0;padding:12px;font-size:13px}h2{font-size:15px;margin:4px 0 8px}p{margin:6px 0;color:#6c6471}button,select{font:inherit;border-radius:6px;border:1px solid #ada0bb;padding:9px;background:white;width:100%;margin:4px 0}button{background:#372846;color:white;cursor:pointer}button:disabled{background:#aaa;cursor:not-allowed}button.secondary{background:#ece7f1;color:#33213f}.notice{padding:9px;border:1px solid #e1d4e3;border-radius:6px;background:#faf9fc}.warning{background:#fff4e8;border-color:#ecc08a}.row{display:flex;gap:8px;align-items:center}.row button{flex:1}.candidate{padding:8px;border-bottom:1px solid #eee}.candidate a{font-size:12px;color:#6f4d8e}.meta{font-size:11px;color:#777}.muted{color:#888}.hidden{display:none}label{display:block;margin-top:8px;font-weight:700}#err{color:#a32930;white-space:pre-wrap}#info{white-space:pre-wrap}
+</style>
+</head><body>
+<h2>IDENTITEIT · MEDEWERKERSKAART</h2>
+<div id="info" class="notice">Identiteit controleren…</div>
+<div id="err" role="alert"></div>
+<section id="content" class="hidden">
+  <div class="meta" id="age"></div>
+  <div id="candidates"></div>
+  <label for="onb">Bestaande medewerker (Onboarding)</label>
+  <select id="onb"><option value="">Selecteer een bestaande ONB-kaart</option></select>
+  <button id="link">Koppel deze kaart aan Onboarding</button>
+  <div id="archive-area" class="hidden">
+    <label for="opl">Bestaande Opleiding-kaart behouden</label>
+    <select id="opl"><option value="">Selecteer de kaart die moet blijven</option></select>
+    <button id="archive" class="secondary">Archiveer deze dubbele kaart</button>
+    <p>Alleen binnen 24 uur, uitsluitend als er geen afgeronde stappen of opmerkingen zijn. Geen permanente verwijdering.</p>
+  </div>
+  <button id="review" class="secondary">Vraag admincontrole aan</button>
+  <button id="refresh" class="secondary">Opnieuw controleren</button>
+  <details id="coreArea"><summary>MEDEWERKERSKAART / GEKOPPELDE PROCESSEN</summary>
+    <p id="coreInfo">Registratie wordt gecontroleerd...</p>
+    <button id="coreRegister" class="secondary hidden">Registreer unieke ONB-identiteit</button>
+    <div id="coreProcess" class="hidden">
+      <label for="coreDest">Verwijs medewerker naar</label>
+      <select id="coreDest"><option value="">Kies ALG-bord</option></select>
+      <button id="corePreview" class="secondary">Controleer koppeling</button>
+      <button id="coreCreate" disabled>Maak gekoppeld proces</button>
+    </div>
+  </details>
+
+</section>
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+<script>
+'use strict';
+const API='https://nktr-employee-core-stage.marice-angulo.workers.dev/api/identity/';
+const t=window.TrelloPowerUp.iframe();const $=id=>document.getElementById(id);
+let state=null,cardId=null,busy=false,referralPreview=null,coreRegistered=false;
+function showError(err){$('err').textContent=String(err?.message||err||'Onbekende fout');}
+async function call(action,data={}){
+ const jwt=await t.jwt({state:JSON.stringify({action:'v46-'+action,cardId})});
+ const r=await fetch(API+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},body:JSON.stringify({cardId,...data})});
+ let value;try{value=await r.json()}catch{throw new Error('Serverantwoord niet leesbaar')};if(!r.ok)throw new Error(value.error||`HTTP ${r.status}`);return value;
+}
+async function coreCall(action,data={}){
+ const jwt=await t.jwt({state:JSON.stringify({action:'v45-'+action,cardId})});
+ const r=await fetch(API.replace('/identity/','/core/')+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},body:JSON.stringify({cardId,...data})});
+ let v;try{v=await r.json()}catch{throw Error('Employee Core antwoord ontbreekt')};if(!r.ok)throw new Error(v.error||`HTTP ${r.status}`);return v;
+}
+async function loadCore(){
+ const card=state?.card;if(!card)return;
+ const dest=$('coreDest');dest.replaceChildren();const opt=document.createElement('option');opt.value='';opt.textContent='Kies ALG-bord';dest.append(opt);
+ for(const c of ['ONB','OPL','HRM','OPS','PLN','PIK','TAK','PRJ','VGD','BAC','FIN','FAC'].filter(c=>c!==card.board)){const o=document.createElement('option');o.value=c;o.textContent=c;dest.append(o)}
+ try{
+  const c=await coreCall('card',{cardId});coreRegistered=true;
+  $('coreInfo').textContent='Medewerker: '+c.employee.name+' · '+c.relationships.map(r=>r.name+' ('+r.state+')').join(', ')+' · gekoppelde kaarten: '+c.registrations.map(r=>r.board_code).join(', ');
+  $('coreProcess').classList.remove('hidden');$('coreRegister').classList.add('hidden');
+ }catch(e){coreRegistered=false;$('coreProcess').classList.add('hidden');
+  $('coreInfo').textContent='Nog niet in Employee Core geregistreerd. '+e.message;
+  $('coreRegister').classList.toggle('hidden',card.board!=='ONB'||state?.signal!=='UNVERIFIED');
+ }
+}
+function option(parent,item){const o=document.createElement('option');o.value=item.cardId;o.textContent=item.name+' · '+item.score+'/100'+(item.archived?' · historisch':'');parent.append(o)}
+function text(parent,text,tag='div',css=''){const el=document.createElement(tag);el.textContent=text;if(css)el.className=css;parent.append(el);return el}
+function update(){if(!state)return;const d=state;
+ $('content').classList.remove('hidden');const linked=d.linkedOnboarding;
+ const explain=d.signal==='LINKED'?'Gekoppeld aan bestaande ONB-medewerker':d.signal==='REGISTERED'?'Geregistreerd in Employee Core':d.signal==='STRONG'?'Sterke overeenkomst gevonden, controle nodig':d.signal==='POSSIBLE'?'Mogelijke overeenkomst, handmatig bevestigen':'Nog geen identiteit bevestigd';
+ $('info').textContent=explain+(d.review?.status==='OPEN'?' · admincontrole aangevraagd':'');
+ $('age').textContent=d.createdAt?'Aangemaakt: '+new Date(d.createdAt).toLocaleString('nl-NL')+' · '+(d.within24Hours?'Binnen 24 uur':'Na 24 uur'): 'Aanmaaktijd niet betrouwbaar vast te stellen · admincontrole verplicht';
+ const box=$('candidates');box.replaceChildren();const onb=$('onb'),opl=$('opl');onb.replaceChildren();opl.replaceChildren();const z=document.createElement('option');z.value='';z.textContent='Selecteer ONB-medewerker';onb.append(z);const z2=document.createElement('option');z2.value='';z2.textContent='Bestaande OPL-kaart';opl.append(z2);
+ for(const c of d.candidates){const div=document.createElement('div');div.className='candidate';text(div,`${c.board} · ${c.name} · ${c.score}/100${c.archived?' (historisch)':''}`);const a=text(div,'Open Trello-kaart','a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';box.append(div);if(!c.archived&&c.board==='ONB')option(onb,c);if(!c.archived&&c.board==='OPL'&&c.score>=92)option(opl,c)}
+ if(d.restrictedMatches)text(box,'Aanvullende matches op beperkt toegankelijke borden. Vraag admincontrole voor een volledige beoordeling.','p','muted');
+ if(!d.candidates.length)text(box,'Geen vergelijkbare ONB/OPL-kaarten gevonden. De identiteit is nog niet automatisch geverifieerd.','p','muted');
+ $('archive-area').classList.toggle('hidden',d.card.board!=='OPL'||opl.options.length<2);
+ const canResolve=(d.within24Hours||d.adminMayResolve)&&!linked;
+ onb.disabled=!canResolve;$('link').disabled=!canResolve;
+ $('archive').disabled=!canResolve;$('review').disabled=d.review?.status==='OPEN';
+ if(linked){text(box,'Gekoppeld aan ONB: '+linked,'p','muted');}
+}
+async function refresh(){showError('');$('info').textContent='Controleren…';state=await call('inspect');update();await loadCore()}
+async function action(task,data,confirmation){if(busy)return;if(confirmation&&!confirm(confirmation))return;busy=true;showError('');try{const result=await call(task,data);$('info').textContent=JSON.stringify(result);await refresh()}catch(err){showError(err)}finally{busy=false}}
+$('link').addEventListener('click',()=>{const id=$('onb').value;if(!id)return showError('Selecteer eerst een ONB-medewerker');action('resolve',{onboardingCardId:id,mode:'LINK'},'Koppel aan deze bestaande Onboarding-identiteit? Dit wist geen werk.');});
+$('archive').addEventListener('click',()=>{const id=$('onb').value,target=$('opl').value;if(!id||!target)return showError('Selecteer een ONB-identiteit én bestaande OPL-kaart om te behouden.');action('resolve',{onboardingCardId:id,existingOplCardId:target,mode:'ARCHIVE_DUPLICATE'},'Dubbele kaart ARCHIVEREN? De bestaande OPL-kaart blijft bewaard. Afgeronde stappen blokkeren archivering.');});
+$('review').addEventListener('click',()=>action('review',{reason:'Controle mogelijke dubbele medewerkeridentiteit'},'Vraag een administrator om identiteit te controleren?'));
+$('coreRegister').addEventListener('click',async()=>{if(busy)return;busy=true;showError('');try{
+ const p=await coreCall('preflight',{cardId});if(!confirm('Registreer nieuwe, gecontroleerde ONB-medewerker '+p.name+' bij '+p.company+'?'))return;
+ const r=await coreCall('register',{previewId:p.previewId,confirm:'REGISTER VERIFIED EMPLOYEE'});$('coreInfo').textContent='GEREGISTREERD: '+r.employeeId;await loadCore();
+ }catch(e){showError(e)}finally{busy=false}});
+$('coreDest').addEventListener('change',()=>{$('coreCreate').disabled=true;referralPreview=null});
+$('corePreview').addEventListener('click',async()=>{showError('');try{const dest=$('coreDest').value;if(!dest)throw Error('Kies een ALG-bord');const r=await coreCall('referral-preview',{sourceCardId:cardId,destinationCode:dest});referralPreview=r.previewId;$('coreInfo').textContent='KOPPELING GECONTROLEERD: '+r.employee+' · '+r.from+' → '+r.destination+' · '+r.targetList;$('coreCreate').disabled=false;}catch(err){showError(err)}});
+$('coreCreate').addEventListener('click',async()=>{if(!referralPreview)return;if(!confirm('Maak dit gekoppelde proces aan in Trello?'))return;const id=referralPreview;referralPreview=null;$('coreCreate').disabled=true;try{const r=await coreCall('referral-create',{previewId:id,confirm:'CREATE LINKED PROCESS'});$('coreInfo').textContent='RESULTAAT: '+r.status+(r.url?' · '+r.url:'')+(r.error?' · '+r.error:'');await loadCore()}catch(e){showError(e)}});
+$('refresh').addEventListener('click',()=>refresh().catch(showError));
+(async()=>{try{const c=await t.card('id');cardId=c.id;await refresh()}catch(err){showError(err);$('info').textContent='Identiteitscontrole momenteel niet beschikbaar.'}})();
+</script></body></html>
