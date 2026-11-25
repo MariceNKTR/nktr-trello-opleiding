@@ -149,7 +149,7 @@ async function loadCore(){
   $('coreProcess').classList.remove('hidden');$('coreRegister').classList.add('hidden');
  }catch(e){coreRegistered=false;$('coreProcess').classList.add('hidden');
   $('coreInfo').textContent='Nog niet in Employee Core geregistreerd. '+e.message;
-  $('coreRegister').classList.toggle('hidden',card.board!=='ONB'||state?.signal!=='UNVERIFIED');
+  $('coreRegister').classList.toggle('hidden',!state?.mayRegisterCore);
  }finally{fitPanel();}
 }
 function option(parent,item){const o=document.createElement('option');o.value=item.cardId;o.textContent=item.name+' · '+item.score+'/100'+(item.archived?' · historisch':'');parent.append(o)}
@@ -168,7 +168,7 @@ function update(){if(!state)return;const d=state;
  if(d.restrictedMatches)text(box,'Aanvullende matches op beperkt toegankelijke borden. Vraag admincontrole voor een volledige beoordeling.','p','muted');
  if(!d.candidates.length)text(box,'Geen vergelijkbare ONB/OPL-kaarten gevonden.','p','muted');
  $('archive-area').classList.toggle('hidden',d.card.board!=='OPL'||opl.options.length<2);
- const canResolve=(d.within24Hours||d.adminMayResolve)&&!linked;
+ const canResolve=d.resolutionEnabled&&d.card.board==='OPL'&&(d.within24Hours||d.adminMayResolve)&&!linked;
  onb.disabled=!canResolve;$('link').disabled=!canResolve;
  $('archive').disabled=!canResolve;$('review').disabled=d.review?.status==='OPEN';
  if(linked){text(box,'Gekoppeld aan ONB: '+linked,'p','muted');}
