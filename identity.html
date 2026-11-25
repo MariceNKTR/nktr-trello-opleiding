@@ -4,40 +4,81 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NKTR · Identiteitscontrole</title>
 <style>
-:root{color-scheme:light;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#292539;background:#fff}
+:root{color-scheme:dark;font-family:system-ui,Segoe UI,Arial,sans-serif;color:#eeebf4;background:transparent}
 *{box-sizing:border-box}
-html,body{margin:0;padding:0}
-body{padding:10px 11px 12px;font-size:13px;line-height:1.4}
-.topbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px}
-.brand{display:inline-flex;align-items:baseline;gap:5px;color:#6d448b;letter-spacing:.035em;white-space:nowrap}
-.brand-name{font-size:15px;font-weight:850;letter-spacing:.075em}
-.brand-studio{font-size:9px;font-weight:700;letter-spacing:.14em}
-.section-note{font-size:11px;color:#736b80}
-button,select{font:inherit;border-radius:6px;border:1px solid #c1b6c9;padding:8px;background:white;width:100%;margin:4px 0}
-button{background:#372846;color:white;cursor:pointer}
-button:disabled{background:#e5e0e9;color:#7d7582;cursor:not-allowed}
-button.secondary{background:#f3f0f6;color:#493954}
-button.compact{margin:0;padding:5px 8px;width:auto;font-size:11px}
-.notice{padding:10px;border:1px solid #ded4e5;border-radius:8px;background:#f8f5fa;font-weight:650}
-.notice.warning{background:#fff8ef;border-color:#e6c995}
-.notice.success{background:#f1f8f4;border-color:#b9d9c5}
-.row{display:flex;gap:8px;align-items:center}.row button{flex:1}
-.candidate{padding:8px 0;border-bottom:1px solid #eae6ed}
-.candidate a{font-size:12px;color:#6f4d8e}
-.meta{font-size:11px;color:#777;margin:5px 0 6px}
-.muted{color:#888}
-.hidden,[hidden]{display:none!important}
-label{display:block;margin-top:8px;font-weight:650}
-#err{color:#a32930;white-space:pre-wrap;font-size:12px;margin:5px 0}
+html,body{margin:0;padding:0;min-width:0;overflow-x:hidden}
+body{padding:3px 4px 7px;font-size:12px;line-height:1.3}
+.panel{border:1px solid #9871c5;border-radius:15px;background:linear-gradient(125deg,#241c31 0%,#1c1926 55%,#211829 100%);box-shadow:0 0 0 1px rgba(174,134,219,.08),0 4px 14px rgba(0,0,0,.13);padding:8px 10px 7px;max-width:100%;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:flex-start;gap:9px;border-bottom:1px solid rgba(200,179,229,.20);padding:0 0 6px;margin:0 0 7px;min-width:0}
+.brand-logo{display:block;width:77px;height:30px;flex:none;overflow:visible}
+.brand-divider{height:25px;width:1px;background:#9074ad;opacity:.8;flex:none}
+.section-note{font-size:12px;font-weight:500;color:#f0eaf7;white-space:nowrap}
+.notice{display:flex;align-items:center;min-height:30px;padding:5px 9px;border:1px solid #5f4977;border-radius:9px;background:linear-gradient(90deg,#4e3a65,#3b2c51);font-weight:650;color:#f5f2f9;line-height:1.2;gap:8px}
+.notice::before{content:'ⓘ';font-size:14px;font-weight:400;color:#ded3ed;line-height:1}
+.notice.warning{background:linear-gradient(90deg,#62412f,#473326);border-color:#8b6441}
+.notice.success{background:linear-gradient(90deg,#274c45,#243b37);border-color:#467d6b}
+.meta{font-size:12px;color:#d1c7db;margin:5px 3px 4px}
+.muted{color:#cec3d7}
+#candidates{margin:0 3px 5px;color:#d5ccde}
+#candidates>p{font-size:12px;margin:2px 0 5px;line-height:1.25}
+.candidate{padding:5px 0;border-bottom:1px solid rgba(203,187,219,.18);font-size:12px}
+.candidate a{color:#d0b7ff;text-decoration:underline;font-size:12px}
+label{display:block;margin:5px 0 3px;font-size:12px;font-weight:650;color:#ebe4f3}
+.link-row{display:grid;grid-template-columns:minmax(0,1fr) 111px;gap:8px;align-items:stretch}
+button,select{font:inherit;font-size:12px;border-radius:7px;border:1px solid #877991;padding:5px 8px;min-height:29px;margin:0;width:100%;color:#ede6f6;background:#2a2632}
+select{min-width:0;appearance:auto;cursor:pointer;color:#efecf2;background:#292531}
+select:focus,button:focus-visible,summary:focus-visible{outline:2px solid #b793eb;outline-offset:1px}
+button{cursor:pointer;font-weight:550}
+button.primary{border-color:#8a60c0;background:linear-gradient(180deg,#6d49aa,#503184);color:white;font-weight:650}
+button.secondary{border-color:#82758e;background:linear-gradient(180deg,#33303c,#292530);color:#f2ecf7}
+button:hover:not(:disabled){filter:brightness(1.13)}
+button:disabled,select:disabled{opacity:.48;cursor:not-allowed}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}
+#err{color:#ffc4c4;white-space:pre-wrap;font-size:12px;margin:6px 0}
 #info{white-space:pre-wrap}
-#coreArea{margin-top:10px;border-top:1px solid #e8e2eb;padding-top:10px}
-#coreArea summary{cursor:pointer;font-weight:650;color:#503c62}
-#coreInfo{font-size:12px;color:#655a6d}
-#content{margin-top:4px}
+#coreArea{margin-top:8px;padding-top:7px;border-top:1px solid rgba(202,176,224,.26);font-size:12px}
+#coreArea summary{font-size:12px;font-weight:650;color:#f2e9fc;cursor:pointer;list-style:revert}
+#coreInfo{font-size:12px;color:#d5c9df;margin:5px 0}
+#coreArea button,#archive-area button{margin:5px 0}
+#coreArea select,#archive-area select{margin-bottom:5px}
+#archive-area{margin-top:6px;padding-top:6px;border-top:1px solid rgba(200,179,229,.20)}
+#archive-area p{font-size:12px;color:#d6c6df;margin:3px 0}
+.hidden,[hidden]{display:none!important}
+#content{margin:0}
+@media(max-width:360px){.link-row{grid-template-columns:minmax(0,1fr) 88px;gap:5px}.brand-logo{width:68px;height:27px}.panel{padding:7px}.row{gap:5px}}
 </style>
 </head><body>
+<main class="panel">
 <div class="topbar">
-  <div class="brand" aria-label="NKTR Studio"><span class="brand-name">NKTR</span><span class="brand-studio">STUDIO</span></div>
+  <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" version="1.1" class="brand-logo" role="img" aria-label="NKTR Studio" viewBox="36 69 778 296" preserveAspectRatio="xMidYMid meet">
+<defs>
+<clipPath id="clip_1">
+<path transform="matrix(1,0,0,-1,0,425.197)" d="M0 425.197H850.394V0H0Z"/>
+</clipPath>
+<path id="font_2_4" d="M.24798584 .25517274C.22499085 .25317384 .19400025 .25317384 .16099549 .25317384 .12998963 .25317384 .09899902 .2541809 .07699585 .25717164 .07499695 .23919678 .07499695 .22322083 .07499695 .20625305 .07499695 .055389406 .19999695-.016601563 .5069885-.016601563 .8019867-.016601563 .9189911 .06538391 .9189911 .2162323 .9189911 .36201478 .82398989 .42292787 .5339966 .44688417 .2849884 .46585084 .2559967 .4988098 .2559967 .5507202 .2559967 .6066437 .30799867 .6375885 .4850006 .6375885 .6859894 .6375885 .7350006 .600647 .7350006 .5287628 .7350006 .5207672 .7350006 .50878909 .73399356 .4988098 .7529907 .49980165 .7849884 .50079348 .81700137 .50079348 .84799197 .50079348 .8789978 .49980165 .897995 .4988098 .8989868 .5157776 .8989868 .5307617 .8989868 .5467377 .8989868 .69659426 .7919922 .76660159 .4889984 .76660159 .20399475 .76660159 .085998538 .68258669 .085998538 .54473879 .085998538 .40994264 .16899109 .3390503 .47599793 .31707765 .70899966 .30110169 .7519989 .27114869 .7519989 .20924378 .7519989 .14834595 .69999697 .11639404 .5049896 .11639404 .31599427 .11639404 .24798584 .15034485 .24798584 .23521424V.25517274Z"/>
+<path id="font_2_5" d="M.017990113 .75C.018997193 .7299957 .018997193 .7029877 .018997193 .6769867 .018997193 .6529846 .018997193 .621994 .017990113 .60198977 .12799073 .60398867 .23599243 .6049957 .32899476 .6049957 .32899476 .32400514 .32798768 .06201172 .32499696-.0009765625 .34999085 .0010223389 .3869934 .0010223389 .41299439 .0010223389 .43899537 .0010223389 .47799684 .0010223389 .5009918-.0009765625 .49899293 .06201172 .49798585 .32499696 .49798585 .6049957 .58999636 .6049957 .69799807 .60398867 .80799868 .60198977 .8069916 .621994 .8069916 .6529846 .8069916 .6769867 .8069916 .7029877 .8069916 .73098757 .80799868 .75H.017990113Z"/>
+<path id="font_2_6" d="M.7999878 .75C.8029938 .64805606 .80400088 .44718934 .80400088 .34425355 .80400088 .19735718 .7299957 .13238526 .54499819 .13238526 .35899354 .13238526 .27598573 .1963501 .27598573 .34425355 .27598573 .44718934 .27799989 .6470642 .28199769 .75H.102996829C.10499573 .69003298 .10699463 .6300659 .10699463 .5401306 .10699463 .48416139 .10499573 .40422059 .10499573 .337265 .10499573 .102386478 .22499085-.016601563 .54100039-.016601563 .8569946-.016601563 .9759979 .102386478 .9759979 .337265 .9759979 .40422059 .973999 .48416139 .973999 .5401306 .973999 .6300659 .97499087 .69003298 .9779968 .75H.7999878Z"/>
+<path id="font_2_1" d="M.5299988 .13899231C.43199159 .13899231 .36898805 .13699341 .27799989 .14299011 .2769928 .19799805 .2769928 .2659912 .2769928 .36898805 .2769928 .44699098 .27799989 .5349884 .27999879 .60899356 .35699464 .61099246 .43998719 .6119995 .5309906 .6119995 .71598818 .6119995 .7969971 .5589905 .7969971 .38198854 .7969971 .20098877 .71099856 .13899231 .5299988 .13899231M.102996829 .75C.10598755 .6539917 .10598755 .5329895 .10598755 .37399293 .10598755 .21499634 .10598755 .10398865 .102996829 0H.5349884C.8529968 0 .96899417 .12298584 .96899417 .3849945 .96899417 .6419983 .848999 .75 .5369873 .75H.102996829Z"/>
+<path id="font_2_2" d="M.2849884 0C.2809906 .116989139 .28199769 .21798706 .28199769 .37599183 .28199769 .5359955 .2809906 .6359863 .2849884 .75H.10699463C.10998535 .6349945 .10998535 .5349884 .10998535 .375 .10998535 .21598816 .10998535 .115997318 .10699463 0H.2849884Z"/>
+<path id="font_2_3" d="M1.0240021 .37998963C1.0240021 .63552859 .84399417 .76953127 .5379944 .76953127 .23298645 .76953127 .053985597 .63552859 .053985597 .37998963 .053985597 .12745667 .22200012-.01953125 .5379944-.01953125 .8549957-.01953125 1.0240021 .12745667 1.0240021 .37998963M.5389862 .12545777C.33198548 .12545777 .22799683 .21229553 .22799683 .37698365 .22799683 .54267886 .33299256 .624527 .5389862 .624527 .7449951 .624527 .848999 .54167178 .848999 .37698365 .848999 .21229553 .74598696 .12545777 .5389862 .12545777Z"/>
+</defs>
+<g inkscape:groupmode="layer" inkscape:label="Layer 1">
+<g clip-path="url(#clip_1)">
+<path transform="matrix(1,0,0,-1,46.1969,276.59858)" d="M0 0 69.181 185.819C82.367 206.882 122.601 199.771 135.966 200.418L167.976 92.005 207 198H266L191.728-9.73C182.365-8.87 134.785-12.621 130.97-8.03L99.976 95.995 59.728-7.73 0-10Z" fill="#f4f0fa"/>
+<path transform="matrix(1,0,0,-1,416.1968,78.5986)" d="M0 0-63.452-103.303-34-208H-98L-128.976-95.761C-110.311-71.534-95.988-39.428-76.832-16.168-72.667-11.11-61.465 0-55 0Z" fill="#f4f0fa"/>
+<path transform="matrix(1,0,0,-1,800.1968,78.5986)" d="M0 0-63.654-105.504-38.235-199.09C-50.733-220.578-64.09-243.323-79.98-261.999L-123.974-106.743C-125.952-99.024-96.511-63.19-100.01-60.011L-120.209-61.237-175-208H-234L-170.346-30.654C-165.681-19.301-142.514 0-131 0Z" fill="#f4f0fa"/>
+<path transform="matrix(1,0,0,-1,610.1968,78.5986)" d="M0 0-20.195-59.8C-22.387-61.691-63.126-58.556-71.003-59.997-73.235-60.406-74.829-60.973-75.828-63.172L-128-208H-188L-136-60H-200L-171.955-13.045C-169.179-9.283-156.828 0-153 0Z" fill="#f4f0fa"/>
+</g>
+<use data-text="S" xlink:href="#font_2_4" transform="matrix(49,0,0,-49,416.646,349.9392)" fill="#f4f0fa"/>
+<use data-text="T" xlink:href="#font_2_5" transform="matrix(49,0,0,-49,466.577,349.9392)" fill="#f4f0fa"/>
+<use data-text="U" xlink:href="#font_2_6" transform="matrix(49,0,0,-49,508.71699,349.9392)" fill="#f4f0fa"/>
+<use data-text="D" xlink:href="#font_2_1" transform="matrix(49,0,0,-49,563.303,349.9392)" fill="#f4f0fa"/>
+<use data-text="I" xlink:href="#font_2_2" transform="matrix(49,0,0,-49,615.488,349.9392)" fill="#f4f0fa"/>
+<use data-text="O" xlink:href="#font_2_3" transform="matrix(49,0,0,-49,636.362,349.9392)" fill="#f4f0fa"/>
+</g>
+</svg>
+
+  <span class="brand-divider" aria-hidden="true"></span>
   <span class="section-note">Medewerkerskaart</span>
 </div>
 <div id="info" class="notice">Identiteit controleren…</div>
@@ -46,8 +87,8 @@ label{display:block;margin-top:8px;font-weight:650}
   <div class="meta" id="age"></div>
   <div id="candidates"></div>
   <label for="onb">Onboarding-record</label>
-  <select id="onb"><option value="">Selecteer een bestaande ONB-kaart</option></select>
-  <button id="link">Koppelen aan Onboarding</button>
+  <div class="link-row"><select id="onb" aria-label="Onboarding-record"><option value="">Kies ONB-kaart</option></select>
+  <button id="link" class="primary">Koppelen</button></div>
   <div id="archive-area" class="hidden">
     <label for="opl">Bestaande Opleiding-kaart behouden</label>
     <select id="opl"><option value="">Selecteer de kaart die moet blijven</option></select>
@@ -55,7 +96,7 @@ label{display:block;margin-top:8px;font-weight:650}
     <p>Alleen binnen 24 uur, uitsluitend als er geen afgeronde stappen of opmerkingen zijn. Geen permanente verwijdering.</p>
   </div>
   <div class="row">
-    <button id="review" class="secondary">Admincontrole aanvragen</button>
+    <button id="review" class="secondary">Admincontrole</button>
     <button id="refresh" class="secondary">Vernieuwen</button>
   </div>
   <details id="coreArea"><summary>Gekoppelde processen</summary>
@@ -70,6 +111,7 @@ label{display:block;margin-top:8px;font-weight:650}
   </details>
 
 </section>
+</main>
 <script src="https://p.trellocdn.com/power-up.min.js"></script>
 <script>
 'use strict';
@@ -115,16 +157,16 @@ function text(parent,text,tag='div',css=''){const el=document.createElement(tag)
 function update(){if(!state)return;const d=state;
  $('content').classList.remove('hidden');const linked=d.linkedOnboarding;
  const bestScore=Math.max(0,...(d.candidates||[]).map(c=>Number(c.score)||0));
- const duplicateLabel=bestScore?`Mogelijke dubbel (${Math.round(bestScore)}% overeenkomst) · controle nodig`:'Mogelijke dubbel · controle nodig';
+ const duplicateLabel=bestScore?`Mogelijke dubbel · ${Math.round(bestScore)}/100 · controle nodig`:'Mogelijke dubbel · controle nodig';
  const explain=d.signal==='LINKED'?'Gekoppeld aan Onboarding':d.signal==='REGISTERED'?'Geregistreerd in Employee Core':d.signal==='STRONG'||d.signal==='POSSIBLE'?duplicateLabel:'Nog geen identiteit bevestigd';
  $('info').textContent=explain+(d.review?.status==='OPEN'?' · admincontrole aangevraagd':'');
  $('info').classList.toggle('warning',d.signal==='STRONG'||d.signal==='POSSIBLE');
  $('info').classList.toggle('success',d.signal==='LINKED'||d.signal==='REGISTERED');
  $('age').textContent=d.createdAt?'Aangemaakt: '+new Date(d.createdAt).toLocaleString('nl-NL')+' · '+(d.within24Hours?'Binnen 24 uur':'Na 24 uur'): 'Aanmaaktijd niet betrouwbaar vast te stellen · admincontrole verplicht';
- const box=$('candidates');box.replaceChildren();const onb=$('onb'),opl=$('opl');onb.replaceChildren();opl.replaceChildren();const z=document.createElement('option');z.value='';z.textContent='Selecteer ONB-medewerker';onb.append(z);const z2=document.createElement('option');z2.value='';z2.textContent='Bestaande OPL-kaart';opl.append(z2);
+ const box=$('candidates');box.replaceChildren();const onb=$('onb'),opl=$('opl');onb.replaceChildren();opl.replaceChildren();const z=document.createElement('option');z.value='';z.textContent='Kies ONB-kaart';onb.append(z);const z2=document.createElement('option');z2.value='';z2.textContent='Kies bestaande OPL-kaart';opl.append(z2);
  for(const c of d.candidates){const div=document.createElement('div');div.className='candidate';text(div,`${c.board} · ${c.name} · ${c.score}/100${c.archived?' (historisch)':''}`);const a=text(div,'Open Trello-kaart','a');a.href=c.url;a.target='_blank';a.rel='noopener noreferrer';box.append(div);if(!c.archived&&c.board==='ONB')option(onb,c);if(!c.archived&&c.board==='OPL'&&c.score>=92)option(opl,c)}
  if(d.restrictedMatches)text(box,'Aanvullende matches op beperkt toegankelijke borden. Vraag admincontrole voor een volledige beoordeling.','p','muted');
- if(!d.candidates.length)text(box,'Geen vergelijkbare ONB/OPL-kaarten gevonden. De identiteit is nog niet automatisch geverifieerd.','p','muted');
+ if(!d.candidates.length)text(box,'Geen vergelijkbare ONB/OPL-kaarten gevonden.','p','muted');
  $('archive-area').classList.toggle('hidden',d.card.board!=='OPL'||opl.options.length<2);
  const canResolve=(d.within24Hours||d.adminMayResolve)&&!linked;
  onb.disabled=!canResolve;$('link').disabled=!canResolve;
@@ -134,7 +176,7 @@ function update(){if(!state)return;const d=state;
 }
 async function refresh(){showError('');$('info').textContent='Controleren…';state=await call('inspect');update();await loadCore()}
 async function action(task,data,confirmation){if(busy)return;if(confirmation&&!confirm(confirmation))return;busy=true;showError('');try{const result=await call(task,data);$('info').textContent=JSON.stringify(result);await refresh()}catch(err){showError(err)}finally{busy=false}}
-$('link').addEventListener('click',()=>{const id=$('onb').value;if(!id)return showError('Selecteer eerst een ONB-medewerker');action('resolve',{onboardingCardId:id,mode:'LINK'},'Koppel aan deze bestaande Onboarding-identiteit? Dit wist geen werk.');});
+$('link').addEventListener('click',()=>{const id=$('onb').value;if(!id)return showError('Kies eerst een ONB-kaart');action('resolve',{onboardingCardId:id,mode:'LINK'},'Koppel aan deze bestaande Onboarding-identiteit? Dit wist geen werk.');});
 $('archive').addEventListener('click',()=>{const id=$('onb').value,target=$('opl').value;if(!id||!target)return showError('Selecteer een ONB-identiteit én bestaande OPL-kaart om te behouden.');action('resolve',{onboardingCardId:id,existingOplCardId:target,mode:'ARCHIVE_DUPLICATE'},'Dubbele kaart ARCHIVEREN? De bestaande OPL-kaart blijft bewaard. Afgeronde stappen blokkeren archivering.');});
 $('review').addEventListener('click',()=>action('review',{reason:'Controle mogelijke dubbele medewerkeridentiteit'},'Vraag een administrator om identiteit te controleren?'));
 $('coreRegister').addEventListener('click',async()=>{if(busy)return;busy=true;showError('');try{
