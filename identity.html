@@ -43,6 +43,7 @@ button:disabled,select:disabled{opacity:.48;cursor:not-allowed}
 #coreArea select,#archive-area select{margin-bottom:5px}
 #archive-area{margin-top:6px;padding-top:6px;border-top:1px solid rgba(200,179,229,.20)}
 #archive-area p{font-size:12px;color:#d6c6df;margin:3px 0}
+#oplCompanyStatus.error{color:#ffcbca}#oplCompanyArea{border-bottom:1px solid rgba(200,179,229,.20);padding-bottom:7px;margin-bottom:4px}
 .hidden,[hidden]{display:none!important}
 #content{margin:0}
 @media(max-width:360px){.link-row{grid-template-columns:minmax(0,1fr) 88px;gap:5px}.brand-logo{width:68px;height:27px}.panel{padding:7px}.row{gap:5px}}
@@ -86,6 +87,12 @@ button:disabled,select:disabled{opacity:.48;cursor:not-allowed}
 <section id="content" class="hidden">
   <div class="meta" id="age"></div>
   <div id="candidates"></div>
+  <section id="oplCompanyArea" class="hidden" aria-label="Opleiding bedrijf">
+    <label for="oplCompany">Bedrijf (Opleiding)</label>
+    <div class="link-row"><select id="oplCompany" disabled><option value="">Bedrijven laden…</option></select>
+    <button id="oplSaveCompany" class="primary" disabled>Opslaan</button></div>
+    <div id="oplCompanyStatus" class="meta" role="status">Alleen actieve ONB Stappenbron-bedrijven zijn beschikbaar.</div>
+  </section>
   <label for="onb">Onboarding-record</label>
   <div class="link-row"><select id="onb" aria-label="Onboarding-record"><option value="">Kies ONB-kaart</option></select>
   <button id="link" class="primary">Koppelen</button></div>
@@ -118,6 +125,9 @@ button:disabled,select:disabled{opacity:.48;cursor:not-allowed}
 const API='https://nktr-employee-core-stage.marice-angulo.workers.dev/api/identity/';
 const t=window.TrelloPowerUp.iframe();const $=id=>document.getElementById(id);
 let state=null,cardId=null,busy=false,referralPreview=null,coreRegistered=false;
+ const OPL_COMPANY_API='https://nktr-employee-core-stage.marice-angulo.workers.dev/api/opl/';
+ let oplCompanies=[];
+
 // An empty string clears an error. It must NOT become 'Onbekende fout'.
 function showError(err){
  const message=typeof err==='string'?err:(err?.message||String(err??''));
@@ -139,6 +149,64 @@ async function coreCall(action,data={}){
  const r=await fetch(API.replace('/identity/','/core/')+action,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},body:JSON.stringify({cardId,...data})});
  let v;try{v=await r.json()}catch{throw Error('Employee Core antwoord ontbreekt')};if(!r.ok)throw new Error(v.error||`HTTP ${r.status}`);return v;
 }
+ // The Opleiding Power-Up owns this card's shared company value. We do not
+ // change ONB identity, employee registrations or any existing referral here.
+ async function oplCompanyRequest(path, action, payload={}){
+   const jwt=await t.jwt({state:JSON.stringify({action,cardId})});
+   const r=await fetch(OPL_COMPANY_API+path,{
+     method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+jwt},
+     body:JSON.stringify({cardId,...payload}),signal:AbortSignal.timeout(25000)
+   });
+   let v;try{v=await r.json()}catch{throw Error('Opleiding-serverantwoord ontbreekt')}
+   if(!r.ok)throw Error(v.error||'Opleiding synchronisatie mislukt (HTTP '+r.status+')');
+   return v;
+ }
+ function companyNote(message,failed=false){
+   const el=$('oplCompanyStatus');el.textContent=message;el.classList.toggle('error',failed);fitPanel();
+ }
+ async function loadOplCompanies(){
+   if(state?.card?.board!=='OPL')return;
+   $('oplCompanyArea').classList.remove('hidden');
+   const sel=$('oplCompany'),save=$('oplSaveCompany');sel.disabled=true;save.disabled=true;
+   companyNote('Goedgekeurde bedrijven ophalen…');
+   try{
+     const [data,existing]=await Promise.all([
+       oplCompanyRequest('companies','opl-companies'),
+       t.get('card','shared','company',null)
+     ]);
+     if(!Array.isArray(data.companies)||!data.companies.length)throw Error('Geen actieve bedrijfsbronnen gevonden');
+     oplCompanies=data.companies.map(x=>x.name).filter(x=>typeof x==='string'&&x.trim());
+     sel.replaceChildren(new Option('Kies bedrijf',''));
+     for(const company of oplCompanies)sel.add(new Option(company,company));
+     const saved=typeof existing==='string'?existing.trim():'';
+     const matched=oplCompanies.find(n=>n.toLocaleLowerCase('nl')===saved.toLocaleLowerCase('nl'));
+     sel.value=matched||'';sel.disabled=false;save.disabled=!sel.value;
+     companyNote(matched?'Huidig bedrijf: '+matched+' · identiteit en eerdere stappen blijven behouden.':
+       saved?'Eerder bedrijf is geen actieve Stappenbron. Selecteer opnieuw.':'Kies een bedrijf en klik op Opslaan.');
+   }catch(err){sel.disabled=true;save.disabled=true;companyNote('Bedrijven ophalen mislukt: '+err.message,true)}
+ }
+ $('oplCompany').addEventListener('change',()=>{$('oplSaveCompany').disabled=!$('oplCompany').value;});
+ $('oplSaveCompany').addEventListener('click',async()=>{
+   if(busy)return;
+   const selected=$('oplCompany').value;
+   if(!oplCompanies.includes(selected))return companyNote('Selecteer een goedgekeurd bedrijf.',true);
+   if(!confirm('Bedrijf voor deze Opleiding-kaart opslaan: '+selected+'?'))return;
+   busy=true;$('oplSaveCompany').disabled=true;$('oplCompany').disabled=true;
+   try{
+     await t.set('card','shared','company',selected);
+     let result;
+     for(let attempt=0;attempt<3;attempt++){
+       try{result=await oplCompanyRequest('company-saved','opl-company-saved',{expectedCompany:selected});break}
+       catch(err){
+         if(attempt===2||!String(err.message).includes('Bedrijf-save not visible'))throw err;
+         await new Promise(done=>setTimeout(done,400*(attempt+1)));
+       }
+     }
+     companyNote('Bedrijf opgeslagen: '+selected+' · checkliststatus: '+result.status+' · identiteit ongewijzigd.');
+   }catch(err){companyNote('Bedrijf kan zijn opgeslagen, maar directe checklist-sync is niet bevestigd: '+err.message,true)}
+   finally{busy=false;$('oplCompany').disabled=false;$('oplSaveCompany').disabled=!$('oplCompany').value}
+ });
+
 async function loadCore(){
  const card=state?.card;if(!card)return;
  const dest=$('coreDest');dest.replaceChildren();const opt=document.createElement('option');opt.value='';opt.textContent='Kies ALG-bord';dest.append(opt);
@@ -174,7 +242,7 @@ function update(){if(!state)return;const d=state;
  if(linked){text(box,'Gekoppeld aan ONB: '+linked,'p','muted');}
  fitPanel();
 }
-async function refresh(){showError('');$('info').textContent='Controleren…';state=await call('inspect');update();await loadCore()}
+async function refresh(){showError('');$('info').textContent='Controleren…';state=await call('inspect');update();await Promise.all([loadCore(),loadOplCompanies()])}
 async function action(task,data,confirmation){if(busy)return;if(confirmation&&!confirm(confirmation))return;busy=true;showError('');try{const result=await call(task,data);$('info').textContent=JSON.stringify(result);await refresh()}catch(err){showError(err)}finally{busy=false}}
 $('link').addEventListener('click',()=>{const id=$('onb').value;if(!id)return showError('Kies eerst een ONB-kaart');action('resolve',{onboardingCardId:id,mode:'LINK'},'Koppel aan deze bestaande Onboarding-identiteit? Dit wist geen werk.');});
 $('archive').addEventListener('click',()=>{const id=$('onb').value,target=$('opl').value;if(!id||!target)return showError('Selecteer een ONB-identiteit én bestaande OPL-kaart om te behouden.');action('resolve',{onboardingCardId:id,existingOplCardId:target,mode:'ARCHIVE_DUPLICATE'},'Dubbele kaart ARCHIVEREN? De bestaande OPL-kaart blijft bewaard. Afgeronde stappen blokkeren archivering.');});
